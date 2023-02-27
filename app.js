@@ -233,7 +233,6 @@ app.get("/news", (request, response) => {
 app.get("/", (request, response) => {
   console.log(request);
   Symbols.find({ id: { $gte: 0 } }).then((data) => {
-    console.log(data[102]);
     response.json({ data });
   });
 });
@@ -247,37 +246,58 @@ app.get("/free-endpoint", (request, response) => {
 app.get("/auth-endpoint", auth, (request, response) => {
   const id = request.user.userId;
   const selected = request.headers.currency;
-  User.findOneAndUpdate(
-    { email: request.user.userEmail },
-    { $addToSet: { rates: selected } }
-  )
-    .then((user) => {
-      console.log(user);
-      response.json(user.rates);
-    })
-    // catch erroe if the new user wasn't added successfully to the database
-    .catch((error) => {
-      response.status(500).send({
-        message: "Error resetting password",
-        error,
+
+  if (selected) {
+    User.findOneAndUpdate(
+      { email: request.user.userEmail },
+      { $set: { rates: selected } },
+      { new: true }
+    )
+      .then((user) => {
+        response.json(user.rates);
+      })
+      // catch erroe if the new user wasn't added successfully to the database
+      .catch((error) => {
+        response.status(500).send({
+          message: "Error",
+          error,
+        });
       });
+  } else {
+    User.findOne({ email: request.user.userEmail })
+      .then((user) => {})
+      // catch erroe if the new user wasn't added successfully to the database
+      .catch((error) => {
+        response.status(500).send({
+          message: "Error",
+          error,
+        });
+      });
+  }
+});
+
+app.get("/account", auth, (request, response) => {
+  console.log("accessed account");
+
+  User.findOne({ email: request.user.userEmail })
+    .then((user) => {
+      response.json({ email: user.email, name: user.name });
+    })
+    .catch((e) => {
+      console.log(e);
     });
 });
 
 app.get("/dashboard", auth, (request, response) => {
-  const id = request.user.userId;
-
   console.log("accessed dashboard");
-  console.log(id);
-  User.findOne({ userId: id })
+
+  User.findOne({ email: request.user.userEmail })
     .then((user) => {
       console.log(user.rates);
+      response.json(user.rates);
     })
     .catch((e) => {
-      response.status(404).send({
-        message: "not found",
-        e,
-      });
+      console.log(e);
     });
 });
 
